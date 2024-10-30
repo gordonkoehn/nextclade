@@ -4,7 +4,7 @@ Nextclade CLI
 
 Nextclade CLI is a command-line tool that identifies differences between your sequences and a reference sequence, uses these differences to assign your sequences to clades, and reports potential sequence quality issues in your data. You can use the tool to analyze sequences before you upload them to a database, or if you want to assign Nextstrain clades to a set of sequences.
 
-  💡 Nextclade CLI is suitable for advanced users requiring large-scale analysis and integration into bioinformatics pipelines. For a simpler, more user-friendly tool, try `Nextclade Web <../nextclade-web.html>`_.
+  💡 Nextclade CLI is suitable for advanced users requiring large-scale analysis and integration into bioinformatics pipelines. For a simpler, more user-friendly tool, try `Nextclade Web <../nextclade-web.rst>`_.
 
 This section describes:
 
