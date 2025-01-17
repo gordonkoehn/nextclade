@@ -12,7 +12,7 @@ use crate::graph::graph::Graph;
 use crate::io::fasta::{read_one_fasta_str, FastaRecord};
 use crate::io::nextclade_csv::CsvColumnConfig;
 use crate::io::nwk_writer::convert_graph_to_nwk_string;
-use crate::run::nextclade_run_one::nextclade_run_one;
+use crate::run::nextclade_run_one::nextclade_run_one; // unused for now
 use crate::run::params::{NextcladeInputParams, NextcladeInputParamsOptional};
 use crate::translate::translate_genes::Translation;
 use crate::translate::translate_genes_ref::translate_genes_ref;
@@ -28,6 +28,8 @@ use optfield::optfield;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+use super::nextclade_run_one::nextclade_run_one_skip_align;
 
 #[derive(Clone, Debug, Serialize, Deserialize, schemars::JsonSchema)]
 #[optfield(pub NextcladeParamsOptional, attrs, doc, field_attrs, field_doc, merge_fn = pub)]
@@ -410,7 +412,7 @@ impl Nextclade {
     } else {
       to_nuc_seq(&input.seq)
     }
-    .and_then(|qry_seq| nextclade_run_one(input.index, &input.seq_name, &qry_seq, self))
+    .and_then(|qry_seq| nextclade_run_one_skip_align(input.index, &input.seq_name, &qry_seq, self))
   }
 
   pub fn get_output_trees(&mut self, results: Vec<NextcladeOutputs>) -> Result<Option<OutputTrees>, Report> {
