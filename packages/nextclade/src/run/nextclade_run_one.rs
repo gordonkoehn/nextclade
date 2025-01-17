@@ -476,6 +476,8 @@ pub fn nextclade_run_one_skip_align(
   qry_seq: &[Nuc],
   state: &Nextclade,
 ) -> Result<AnalysisOutput, Report> {
+  // This is a modified version of the function nextclade_run_one
+  // The only difference is that the alignment step is skipped
   let Nextclade {
     ref_seq,
     ref_record,
