@@ -1,4 +1,4 @@
-use crate::align::align::align_nuc;
+use crate::align::align::{align_nuc, StripInsertionsResult};
 use crate::align::insertions_strip::{get_aa_insertions, insertions_strip, AaIns, NucIns};
 use crate::alphabet::aa::Aa;
 use crate::alphabet::letter::Letter;
@@ -533,12 +533,33 @@ pub fn nextclade_run_one_skip_align(
             serde_json::from_str::<AlignmentRecord>(&json_line).ok()
         })
         .collect();
+        
+        // save these alignment records to a file each titled with read id
+        // in out / vpipe
+        for record in alignment_records.iter() {
+          let record_json = serde_json::to_string(&record).unwrap();
+          let file_name = format!("out/vpipe/{}.json", record.read_id);
+          std::fs::write(file_name, record_json).unwrap();
+        }
   
-  // Print just the first record to verify
-  if let Some(first_record) = alignment_records.first() {
-    println!("First record: {:?}", first_record);
-  }
   println!("Total records processed: {}", alignment_records.len());
+  // import the aligment_records to a StripINsertionsResult<Nuc> struct
+  let stripped_import = StripInsertionsResult {
+    // TODO: alright here I got to figure out how to parse the nucliotide and inserts to the correct types
+    qry_seq: alignment_records[0].query_seq_aligned.chars().map(|c| Nuc::from(c)).collect(),
+    insertions: alignment_records[0].inserts.iter().map(|ins| NucIns::from(ins)).collect(),
+  };
+
+
+  // save stripped_imports to files again under out/vpipe/StrippedInserrtionsREsults
+  let stripped_import_json = serde_json::to_string(&stripped_import).unwrap();
+  let stipped_import_names: Vec<String> = alignment_records.iter().map(|record| record.read_id.clone()).collect();
+  for name in stipped_import_names.iter() {
+    let file_name = format!("out/vpipe/StrippedInsertionsResults/{}.json", name);
+    std::fs::write(file_name, stripped_import_json.clone()).unwrap();
+  }
+
+ 
 
   let FindNucChangesOutput {
     substitutions,
