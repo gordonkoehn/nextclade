@@ -26,12 +26,38 @@ mod tests {
   }
 }
 
+use std::any::Any;
+
+use crate::alphabet::nuc::to_nuc_seq;
 use pyo3::prelude::*;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
+fn translate_aa_align(qry_seq: &str) -> PyResult<String> {
+  let qry_seq = to_nuc_seq(qry_seq);
+  let a = 1;
+  let b = 2;
   Ok((a + b).to_string())
+  // need query sequence
+  // reference sequence
+
+  // reference translation
+  // gene map
+  // global coordinates map
+  // alignment range
+  // gap open close aa
+  // alignment params
+
+  /*   let translation = translate_genes(
+    &alignment.qry_seq,
+    &alignment.ref_seq,
+    ref_translation,
+    gene_map,
+    &coord_map_global,
+    &alignment_range,
+    gap_open_close_aa,
+    &params.alignment,
+  )?; */
 }
 
 /// A Python module implemented in Rust. The name of this function must match
@@ -39,6 +65,6 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 /// import the module.
 #[pymodule]
 fn nextclade(_py: Python, m: &PyModule) -> PyResult<()> {
-  m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+  m.add_function(wrap_pyfunction!(translate_aa_align, m)?)?;
   Ok(())
 }
