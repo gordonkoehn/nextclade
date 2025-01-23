@@ -35,6 +35,7 @@ use crate::analyze::nuc_changes::{find_nuc_changes, FindNucChangesOutput};
 use crate::coord::coord_map_global::CoordMapGlobal;
 use crate::coord::range::NucRefGlobalRange;
 use crate::gene::gene_map;
+use crate::translate::translate_genes::{translate_genes, Translation};
 use crate::translate::translate_genes_ref;
 
 use pyo3::prelude::*;
@@ -98,8 +99,6 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
   // get the gap open close aa
   let gap_open_close_aa = get_gap_open_close_scores_flat(&ref_seq, &params_alignment);
 
-  Ok(format!("{:?}", gap_open_close_aa))
-
   /*   let a = 1;
   let b = 2;
   Ok((a + b).to_string()) */
@@ -112,16 +111,26 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
   // gap open close aa
   // alignment params
 
-  /*   let translation = translate_genes(
-    &alignment.qry_seq,
-    &alignment.ref_seq,
-    ref_translation,
-    gene_map,
+  let translation = match translate_genes(
+    &qry_seq,
+    &ref_seq,
+    &ref_translation,
+    &gene_map,
     &coord_map_global,
     &alignment_range,
-    gap_open_close_aa,
-    &params.alignment,
-  )?; */
+    &gap_open_close_aa,
+    &params_alignment,
+  ) {
+    Ok(trans) => trans,
+    Err(e) => {
+      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+        "Error translating genes: {}",
+        e
+      )))
+    }
+  };
+
+  Ok(format!("{:?}", translation))
 }
 
 /// A Python module implemented in Rust. The name of this function must match
