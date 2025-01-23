@@ -28,17 +28,28 @@ mod tests {
 
 use std::any::Any;
 
+use crate::align::params::AlignPairwiseParams;
 use crate::alphabet::nuc::to_nuc_seq;
 use crate::gene::gene_map;
+use crate::translate::translate_genes_ref;
 
 use pyo3::prelude::*;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
 fn translate_aa_align(ref_seq: &str, gene_ref: &str) -> PyResult<String> {
-  let ref_seq = to_nuc_seq(ref_seq);
+  let ref_seq = match to_nuc_seq(ref_seq) {
+    Ok(seq) => seq,
+    Err(e) => {
+      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+        "Error converting to nucleotide sequence: {}",
+        e
+      )))
+    }
+  };
+
   // get gene_map - try to get via the run_args
-  let gene_map = match gene_map::GeneMap::from_path(gene_ref) {
+  let gene_map: gene_map::GeneMap = match gene_map::GeneMap::from_path(gene_ref) {
     Ok(map) => map,
     Err(e) => {
       return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
@@ -47,10 +58,19 @@ fn translate_aa_align(ref_seq: &str, gene_ref: &str) -> PyResult<String> {
       )))
     }
   };
-  /*
-   let ref_translation =
-     translate_genes_ref(&ref_seq, &gene_map, &params.alignment).wrap_err("When translating reference sequence")?;
-  */
+  let params_alignment = AlignPairwiseParams::default();
+
+  let ref_translation: translate::translate_genes::Translation =
+    match translate_genes_ref::translate_genes_ref(&ref_seq, &gene_map, &params_alignment) {
+      Ok(trans) => trans,
+      Err(e) => {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+          "Error translating genes: {}",
+          e
+        )))
+      }
+    };
+
   let a = 1;
   let b = 2;
   Ok((a + b).to_string())
