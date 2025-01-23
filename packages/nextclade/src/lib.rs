@@ -30,7 +30,9 @@ use std::any::Any;
 
 use crate::align::params::AlignPairwiseParams;
 use crate::alphabet::nuc::to_nuc_seq;
+use crate::analyze::nuc_changes::{find_nuc_changes, FindNucChangesOutput};
 use crate::coord::coord_map_global::CoordMapGlobal;
+use crate::coord::range::NucRefGlobalRange;
 use crate::gene::gene_map;
 use crate::translate::translate_genes_ref;
 
@@ -38,8 +40,18 @@ use pyo3::prelude::*;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
-fn translate_aa_align(ref_seq: &str, gene_ref: &str) -> PyResult<String> {
+fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<String> {
   let ref_seq = match to_nuc_seq(ref_seq) {
+    Ok(seq) => seq,
+    Err(e) => {
+      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+        "Error converting to nucleotide sequence: {}",
+        e
+      )))
+    }
+  };
+
+  let qry_seq = match to_nuc_seq(qry_seq) {
     Ok(seq) => seq,
     Err(e) => {
       return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
@@ -74,15 +86,25 @@ fn translate_aa_align(ref_seq: &str, gene_ref: &str) -> PyResult<String> {
   // next global coordinates map
   let coord_map_global = CoordMapGlobal::new(&ref_seq);
 
-  let a = 1;
+  // get alignment_range
+
+  let FindNucChangesOutput {
+    substitutions,
+    deletions,
+    alignment_range,
+  } = find_nuc_changes(&qry_seq, &ref_seq);
+
+  Ok(format!("{:?}", alignment_range))
+
+  /*   let a = 1;
   let b = 2;
-  Ok((a + b).to_string())
+  Ok((a + b).to_string()) */
   // need query sequence
   // reference sequence
   // reference translation
   // gene map
-
   // global coordinates map
+
   // alignment range
   // gap open close aa
   // alignment params
