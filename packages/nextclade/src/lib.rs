@@ -38,7 +38,7 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
-fn nextclade(py: Python, m: &PyModule) -> PyResult<()> {
+fn nextclade(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
   Ok(())
 }
