@@ -29,12 +29,28 @@ mod tests {
 use std::any::Any;
 
 use crate::alphabet::nuc::to_nuc_seq;
+use crate::gene::gene_map;
+
 use pyo3::prelude::*;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
-fn translate_aa_align(qry_seq: &str) -> PyResult<String> {
-  let qry_seq = to_nuc_seq(qry_seq);
+fn translate_aa_align(ref_seq: &str, gene_ref: &str) -> PyResult<String> {
+  let ref_seq = to_nuc_seq(ref_seq);
+  // get gene_map - try to get via the run_args
+  let gene_map = match gene_map::GeneMap::from_path(gene_ref) {
+    Ok(map) => map,
+    Err(e) => {
+      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+        "Error loading gene map: {}",
+        e
+      )))
+    }
+  };
+  /*
+   let ref_translation =
+     translate_genes_ref(&ref_seq, &gene_map, &params.alignment).wrap_err("When translating reference sequence")?;
+  */
   let a = 1;
   let b = 2;
   Ok((a + b).to_string())
