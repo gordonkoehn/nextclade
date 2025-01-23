@@ -30,6 +30,7 @@ use std::any::Any;
 
 use crate::align::params::AlignPairwiseParams;
 use crate::alphabet::nuc::to_nuc_seq;
+use crate::coord::coord_map_global::CoordMapGlobal;
 use crate::gene::gene_map;
 use crate::translate::translate_genes_ref;
 
@@ -70,15 +71,17 @@ fn translate_aa_align(ref_seq: &str, gene_ref: &str) -> PyResult<String> {
         )))
       }
     };
+  // next global coordinates map
+  let coord_map_global = CoordMapGlobal::new(&ref_seq);
 
   let a = 1;
   let b = 2;
   Ok((a + b).to_string())
   // need query sequence
   // reference sequence
-
   // reference translation
   // gene map
+
   // global coordinates map
   // alignment range
   // gap open close aa
