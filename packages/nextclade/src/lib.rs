@@ -28,6 +28,7 @@ mod tests {
 
 use std::any::Any;
 
+use crate::align::gap_open::get_gap_open_close_scores_flat;
 use crate::align::params::AlignPairwiseParams;
 use crate::alphabet::nuc::to_nuc_seq;
 use crate::analyze::nuc_changes::{find_nuc_changes, FindNucChangesOutput};
@@ -94,7 +95,10 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
     alignment_range,
   } = find_nuc_changes(&qry_seq, &ref_seq);
 
-  Ok(format!("{:?}", alignment_range))
+  // get the gap open close aa
+  let gap_open_close_aa = get_gap_open_close_scores_flat(&ref_seq, &params_alignment);
+
+  Ok(format!("{:?}", gap_open_close_aa))
 
   /*   let a = 1;
   let b = 2;
@@ -104,7 +108,6 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
   // reference translation
   // gene map
   // global coordinates map
-
   // alignment range
   // gap open close aa
   // alignment params
