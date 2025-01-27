@@ -29,12 +29,16 @@ mod tests {
 use std::any::Any;
 
 use crate::align::gap_open::get_gap_open_close_scores_flat;
+use crate::align::insertions_strip::get_aa_insertions;
 use crate::align::params::AlignPairwiseParams;
 use crate::alphabet::nuc::to_nuc_seq;
+use crate::analyze::aa_changes_find::aa_changes_find;
+use crate::analyze::aa_changes_find_for_cds::{AaChangesParams, FindAaChangesOutput};
 use crate::analyze::nuc_changes::{find_nuc_changes, FindNucChangesOutput};
 use crate::coord::coord_map_global::CoordMapGlobal;
 use crate::coord::range::NucRefGlobalRange;
 use crate::gene::gene_map;
+use crate::translate::frame_shifts_flatten::frame_shifts_flatten;
 use crate::translate::translate_genes::{translate_genes, Translation};
 use crate::translate::translate_genes_ref;
 
@@ -129,6 +133,31 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
       )))
     }
   };
+
+  let aa_insertions = get_aa_insertions(&translation);
+
+  let frame_shifts = frame_shifts_flatten(&translation);
+  let total_frame_shifts = frame_shifts.len();
+
+  //setting these params to default for a lack of better understanding
+  let aa_changes_params = AaChangesParams::default();
+
+  let FindAaChangesOutput {
+    aa_changes_groups,
+    aa_substitutions,
+    aa_deletions,
+    nuc_to_aa_muts,
+  } = match aa_changes_find(&aln, &ref_translation, &translation, &gene_map, &aa_changes_params) {
+    Ok(output) => output,
+    Err(e) => {
+      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+        "Error finding amino acid changes: {}",
+        e
+      )))
+    }
+  };
+
+  // Todo: get nucliotide aligment for `aln`  - got all parts.
 
   Ok(format!("{:?}", translation))
 }
