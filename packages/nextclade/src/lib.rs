@@ -44,57 +44,31 @@ use crate::translate::frame_shifts_flatten::frame_shifts_flatten;
 use crate::translate::translate_genes::{translate_genes, Translation};
 use crate::translate::translate_genes_ref;
 
+use std::time::Instant;
+
+use serde::{Deserialize, Serialize};
+
 use pyo3::prelude::*;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<String> {
-  let ref_seq = match to_nuc_seq(ref_seq) {
-    Ok(seq) => seq,
-    Err(e) => {
-      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-        "Error converting to nucleotide sequence: {}",
-        e
-      )))
-    }
-  };
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AaAlignment {
+  // custom struct to hold the output of the translation
+  pub qry_seq: Vec<alphabet::nuc::Nuc>,
+  pub translation: Translation,
+  pub aa_insertions: Vec<align::insertions_strip::AaIns>,
+}
 
-  let qry_seq = match to_nuc_seq(qry_seq) {
-    Ok(seq) => seq,
-    Err(e) => {
-      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-        "Error converting to nucleotide sequence: {}",
-        e
-      )))
-    }
-  };
+fn perform_translation(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> Result<AaAlignment, String> {
+  let ref_seq = to_nuc_seq(ref_seq).map_err(|e| format!("Error converting to nucleotide sequence: {}", e))?;
+  let qry_seq = to_nuc_seq(qry_seq).map_err(|e| format!("Error converting to nucleotide sequence: {}", e))?;
 
-  // get gene_map - try to get via the run_args
-  let gene_map: gene_map::GeneMap = match gene_map::GeneMap::from_path(gene_ref) {
-    Ok(map) => map,
-    Err(e) => {
-      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-        "Error loading gene map: {}",
-        e
-      )))
-    }
-  };
+  let gene_map = gene_map::GeneMap::from_path(gene_ref).map_err(|e| format!("Error loading gene map: {}", e))?;
   let params_alignment = AlignPairwiseParams::default();
 
-  let ref_translation: translate::translate_genes::Translation =
-    match translate_genes_ref::translate_genes_ref(&ref_seq, &gene_map, &params_alignment) {
-      Ok(trans) => trans,
-      Err(e) => {
-        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-          "Error translating genes: {}",
-          e
-        )))
-      }
-    };
-  // next global coordinates map
-  let coord_map_global = CoordMapGlobal::new(&ref_seq);
+  let ref_translation = translate_genes_ref::translate_genes_ref(&ref_seq, &gene_map, &params_alignment)
+    .map_err(|e| format!("Error translating genes: {}", e))?;
 
-  // get alignment_range
+  let coord_map_global = CoordMapGlobal::new(&ref_seq);
 
   let FindNucChangesOutput {
     substitutions,
@@ -104,22 +78,9 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
 
   let aln = NucAlignment::new(&ref_seq, &qry_seq, &alignment_range);
 
-  // get the gap open close aa
   let gap_open_close_aa = get_gap_open_close_scores_flat(&ref_seq, &params_alignment);
 
-  /*   let a = 1;
-  let b = 2;
-  Ok((a + b).to_string()) */
-  // need query sequence
-  // reference sequence
-  // reference translation
-  // gene map
-  // global coordinates map
-  // alignment range
-  // gap open close aa
-  // alignment params
-
-  let translation = match translate_genes(
+  let translation = translate_genes(
     &qry_seq,
     &ref_seq,
     &ref_translation,
@@ -128,46 +89,31 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
     &alignment_range,
     &gap_open_close_aa,
     &params_alignment,
-  ) {
-    Ok(trans) => trans,
-    Err(e) => {
-      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-        "Error translating genes: {}",
-        e
-      )))
-    }
-  };
+  )
+  .map_err(|e| format!("Error translating genes: {}", e))?;
 
   let aa_insertions = get_aa_insertions(&translation);
 
-  let frame_shifts = frame_shifts_flatten(&translation);
-  let total_frame_shifts = frame_shifts.len();
+  Ok(AaAlignment {
+    qry_seq,
+    translation,
+    aa_insertions,
+  })
+}
 
-  //setting these params to default for a lack of better understanding
-  let aa_changes_params = AaChangesParams::default();
+/// Formats the sum of two numbers as string.
+#[pyfunction]
+fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<String> {
+  let now = Instant::now();
 
-  let FindAaChangesOutput {
-    aa_changes_groups,
-    aa_substitutions,
-    aa_deletions,
-    nuc_to_aa_muts,
-  } = match aa_changes_find(&aln, &ref_translation, &translation, &gene_map, &aa_changes_params) {
-    Ok(output) => output,
-    Err(e) => {
-      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-        "Error finding amino acid changes: {}",
-        e
-      )))
-    }
-  };
+  let aa_alignment =
+    perform_translation(ref_seq, qry_seq, gene_ref).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e))?;
+
+  let elapsed = now.elapsed();
 
   Ok(format!(
-    "TRANSLATION:\n{:?}\n\nAA CHANGES GROUPS:\n{:?}\n\nAA SUBSTITUTIONS:\n{:?}\n\nAA DELETIONS:\n{:?}\n\nNUC TO AA MUTATIONS:\n{:?}",
-    translation,
-    aa_changes_groups,
-    aa_substitutions,
-    aa_deletions,
-    nuc_to_aa_muts
+    "TRANSLATION:\n{:?}\n\nAA INSERTIONS:\n{:?}",
+    aa_alignment.translation, aa_alignment.aa_insertions
   ))
 }
 
