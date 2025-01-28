@@ -34,6 +34,7 @@ use crate::align::params::AlignPairwiseParams;
 use crate::alphabet::nuc::to_nuc_seq;
 use crate::analyze::aa_changes_find::aa_changes_find;
 use crate::analyze::aa_changes_find_for_cds::{AaChangesParams, FindAaChangesOutput};
+use crate::analyze::nuc_alignment::NucAlignment;
 use crate::analyze::nuc_changes::{find_nuc_changes, FindNucChangesOutput};
 use crate::coord::coord_map_global::CoordMapGlobal;
 use crate::coord::range::NucRefGlobalRange;
@@ -99,6 +100,8 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
     deletions,
     alignment_range,
   } = find_nuc_changes(&qry_seq, &ref_seq);
+
+  let aln = NucAlignment::new(&ref_seq, &qry_seq, &alignment_range);
 
   // get the gap open close aa
   let gap_open_close_aa = get_gap_open_close_scores_flat(&ref_seq, &params_alignment);
