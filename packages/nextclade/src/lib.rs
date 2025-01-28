@@ -53,6 +53,7 @@ use pyo3::prelude::*;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AaAlignment {
   // custom struct to hold the output of the translation
+  // TODO: disfunctional, need to fix
   pub qry_seq: Vec<alphabet::nuc::Nuc>,
   pub translation: Translation,
   pub aa_insertions: Vec<align::insertions_strip::AaIns>,
@@ -117,11 +118,30 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
   ))
 }
 
+#[pyfunction]
+fn batch_translate_aa_align(ref_seq: &str, qry_seqs: Vec<&str>, gene_ref: &str) -> PyResult<String> {
+  // TODO: disfunctional, need to fix
+  let mut results = Vec::new();
+
+  for qry_seq in qry_seqs {
+    match perform_translation(ref_seq, qry_seq, gene_ref) {
+      Ok(aa_alignment) => {
+        let result = serde_json::to_string(&aa_alignment).unwrap();
+        results.push(result);
+      }
+      Err(e) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(e)),
+    }
+  }
+
+  Ok(results.join("\n"))
+}
+
 /// A Python module implemented in Rust. The name of this function must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
 fn nextclade(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(translate_aa_align, m)?)?;
+  m.add_function(wrap_pyfunction!(batch_translate_aa_align, m)?)?;
   Ok(())
 }
