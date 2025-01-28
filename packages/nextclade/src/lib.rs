@@ -27,6 +27,7 @@ mod tests {
 }
 
 use std::any::Any;
+use std::fmt::Debug;
 
 use crate::align::gap_open::get_gap_open_close_scores_flat;
 use crate::align::insertions_strip::get_aa_insertions;
@@ -160,9 +161,14 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
     }
   };
 
-  // Todo: get nucliotide aligment for `aln`  - got all parts.
-
-  Ok(format!("{:?}", translation))
+  Ok(format!(
+    "TRANSLATION:\n{:?}\n\nAA CHANGES GROUPS:\n{:?}\n\nAA SUBSTITUTIONS:\n{:?}\n\nAA DELETIONS:\n{:?}\n\nNUC TO AA MUTATIONS:\n{:?}",
+    translation,
+    aa_changes_groups,
+    aa_substitutions,
+    aa_deletions,
+    nuc_to_aa_muts
+  ))
 }
 
 /// A Python module implemented in Rust. The name of this function must match
