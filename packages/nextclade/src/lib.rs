@@ -51,9 +51,16 @@ use serde::{Deserialize, Serialize};
 use pyo3::prelude::*;
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct FullAligmentWithId {
+  pub read_id: String,
+  pub qry_seq_unaligned: Vec<alphabet::nuc::Nuc>,
+  pub qry_seq: Vec<alphabet::nuc::Nuc>,
+  pub translation: Translation,
+  pub aa_insertions: Vec<align::insertions_strip::AaIns>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AaAlignment {
-  // custom struct to hold the output of the translation
-  // TODO: disfunctional, need to fix
   pub qry_seq: Vec<alphabet::nuc::Nuc>,
   pub translation: Translation,
   pub aa_insertions: Vec<align::insertions_strip::AaIns>,
@@ -102,15 +109,10 @@ fn perform_translation(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> Result<A
   })
 }
 
-/// Formats the sum of two numbers as string.
 #[pyfunction]
 fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<String> {
-  let now = Instant::now();
-
   let aa_alignment =
     perform_translation(ref_seq, qry_seq, gene_ref).map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e))?;
-
-  let elapsed = now.elapsed();
 
   Ok(format!(
     "TRANSLATION:\n{:?}\n\nAA INSERTIONS:\n{:?}",
@@ -118,22 +120,46 @@ fn translate_aa_align(ref_seq: &str, qry_seq: &str, gene_ref: &str) -> PyResult<
   ))
 }
 
+fn perform_full_translation_with_id(
+  read_id: String,
+  ref_seq: &str,
+  qry_seq_unaligned: &str,
+  qry_seq: &str,
+  gene_ref: &str,
+) -> Result<FullAligmentWithId, String> {
+  let aa_alignment = perform_translation(ref_seq, qry_seq, gene_ref)?;
+
+  let qry_seq_unaligned = to_nuc_seq(qry_seq_unaligned).map_err(|e| {
+    format!(
+      "Error converting unaligned query sequence to nucleotide sequence: {}",
+      e
+    )
+  })?;
+
+  Ok(FullAligmentWithId {
+    read_id,
+    qry_seq_unaligned,
+    qry_seq: aa_alignment.qry_seq,
+    translation: aa_alignment.translation,
+    aa_insertions: aa_alignment.aa_insertions,
+  })
+}
+
 #[pyfunction]
-fn batch_translate_aa_align(ref_seq: &str, qry_seqs: Vec<&str>, gene_ref: &str) -> PyResult<String> {
-  // TODO: disfunctional, need to fix
-  let mut results = Vec::new();
+fn translate_full_align_with_id(
+  read_id: String,
+  ref_seq: &str,
+  qry_seq_unaligned: &str,
+  qry_seq: &str,
+  gene_ref: &str,
+) -> PyResult<String> {
+  let full_alignment = perform_full_translation_with_id(read_id, ref_seq, qry_seq_unaligned, qry_seq, gene_ref)
+    .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e))?;
 
-  for qry_seq in qry_seqs {
-    match perform_translation(ref_seq, qry_seq, gene_ref) {
-      Ok(aa_alignment) => {
-        let result = serde_json::to_string(&aa_alignment).unwrap();
-        results.push(result);
-      }
-      Err(e) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(e)),
-    }
-  }
+  let ndjson = serde_json::to_string(&full_alignment)
+    .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
-  Ok(results.join("\n"))
+  Ok(ndjson)
 }
 
 /// A Python module implemented in Rust. The name of this function must match
@@ -142,6 +168,6 @@ fn batch_translate_aa_align(ref_seq: &str, qry_seqs: Vec<&str>, gene_ref: &str) 
 #[pymodule]
 fn nextclade(_py: Python, m: &PyModule) -> PyResult<()> {
   m.add_function(wrap_pyfunction!(translate_aa_align, m)?)?;
-  m.add_function(wrap_pyfunction!(batch_translate_aa_align, m)?)?;
+  m.add_function(wrap_pyfunction!(translate_full_align_with_id, m)?)?;
   Ok(())
 }
